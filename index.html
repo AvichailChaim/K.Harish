@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+  <meta charset="UTF-8" />
+  <title>טופס פרטי משפחה</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      background: #d0d8f9;
+      font-family: 'Assistant', Arial, sans-serif;
+      direction: rtl;
+      margin: 0;
+      padding: 20px;
+      color: #273c75;
+    }
+    .logo-container {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .logo-container img {
+      max-width: 160px;
+      height: auto;
+    }
+    form {
+      max-width: 600px;
+      margin: auto;
+      background: #ffffff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 14px rgba(39, 60, 117, 0.2);
+    }
+    label {
+      display: block;
+      margin: 15px 0 5px;
+      font-weight: bold;
+      color: #273c75;
+    }
+    input[type='text'],
+    input[type='tel'],
+    input[type='email'],
+    input[type='number'],
+    select,
+    input[type='file'] {
+      width: 100%;
+      padding: 10px;
+      font-size: 1em;
+      border: 1.5px solid #8aa1e5;
+      border-radius: 8px;
+      box-sizing: border-box;
+      background: #ffffff;
+      color: #273c75;
+      transition: border-color 0.2s;
+    }
+    input[type='text']:focus,
+    input[type='tel']:focus,
+    input[type='email']:focus,
+    input[type='number']:focus,
+    select:focus,
+    input[type='file']:focus {
+      border-color: #3b4cca;
+      outline: none;
+      background: #f0f3ff;
+    }
+    .radio-group {
+      margin-top: 5px;
+      display: flex;
+      gap: 20px;
+    }
+    .radio-group label {
+      font-weight: normal;
+      color: #273c75;
+      cursor: pointer;
+      user-select: none;
+    }
+    button[type='submit'] {
+      background: #3b4cca;
+      color: white;
+      border: none;
+      font-weight: bold;
+      font-size: 1.1em;
+      padding: 14px;
+      border-radius: 22px;
+      width: 100%;
+      cursor: pointer;
+      margin-top: 25px;
+      letter-spacing: 1px;
+      box-shadow: 0 2px 8px rgba(59, 76, 202, 0.3);
+      transition: background 0.2s, color 0.2s;
+    }
+    button[type='submit']:hover {
+      background: #2d3699;
+      color: #eef2ff;
+    }
+    #successMessage {
+      display: none;
+      background: #e7f6e7;
+      color: #2e6b2e;
+      padding: 18px;
+      border-radius: 10px;
+      border: 1.5px solid #3b4cca;
+      margin-top: 18px;
+      text-align: center;
+      font-weight: bold;
+      font-size: 1.1em;
+    }
+    .file-display {
+      margin-top: 10px;
+      font-style: italic;
+      color: #666;
+      font-size: 0.9em;
+    }
+  </style>
+</head>
+<body>
+  <div class="logo-container">
+    <img src="logo.png" alt="לוגו" />
+  </div>
+  <form id="familyForm">
+    <label>בקשת סיוע ל:</label>
+    <div class="radio-group">
+      <label><input type="radio" name="aidType" value="חגי תשרי" required />חגי תשרי</label>
+      <label><input type="radio" name="aidType" value="חג הפסח" required />חג הפסח</label>
+    </div>
+    <label for="email">אימייל:</label>
+    <input type="email" id="email" name="email" required />
+    <label for="firstName">שם פרטי:</label>
+    <input type="text" id="firstName" name="firstName" required />
+    <label for="lastName">שם משפחה:</label>
+    <input type="text" id="lastName" name="lastName" required />
+    <label for="phone">מספר פלאפון:</label>
+    <input type="tel" id="phone" name="phone" required />
+    <label for="idNumber">מספר תעודת זהות:</label>
+    <input type="text" id="idNumber" name="idNumber" required pattern="^\d{9}$" inputmode="numeric" title="אנא הזן בדיוק 9 ספרות" />
+    <label for="childrenCount">מספר ילדים (עד גיל 18):</label>
+    <input type="number" id="childrenCount" name="childrenCount" min="0" required />
+    <label for="street">רחוב:</label>
+    <input type="text" id="street" name="street" required />
+    <label for="buildingNumber">מספר בניין:</label>
+    <input type="text" id="buildingNumber" name="buildingNumber" required />
+    <label for="apartmentNumber">מספר דירה:</label>
+    <input type="text" id="apartmentNumber" name="apartmentNumber" required />
+    <label>הדירה בבעלות או בשכירות?</label>
+    <div class="radio-group">
+      <label><input type="radio" name="ownershipStatus" value="דירה בבעלותנו" required />דירה בבעלותנו</label>
+      <label><input type="radio" name="ownershipStatus" value="דירה בשכירות" required />דירה בשכירות</label>
+    </div>
+    <label for="fatherIncome">משכורת/קצבאות של האבא בבית:</label>
+    <input type="text" id="fatherIncome" name="fatherIncome" required />
+    <label for="motherIncome">משכורת/קצבאות של האמא בבית:</label>
+    <input type="text" id="motherIncome" name="motherIncome" required />
+    <label>האם הנכם מקבלים סיוע מארגון חסד נוסף או מהרווחה?</label>
+    <div class="radio-group">
+      <label><input type="radio" name="receivesAid" value="כן" required />כן</label>
+      <label><input type="radio" name="receivesAid" value="לא" required />לא</label>
+    </div>
+    <label for="idUpload">חובה: יש לעלות תצלום ת.ז עם ספח</label>
+    <input type="file" id="idUpload" name="fileData" accept="image/*,application/pdf" required />
+    <div id="fileDisplay" class="file-display"></div>
+    <button type="submit">שלח</button>
+  </form>
+  <div id="successMessage">הטופס נשלח בהצלחה! תודה רבה על שיתוף הפעולה.</div>
+
+  <script>
+    const SCRIPT_URL = 'YOUR_ACTUAL_WEB_APP_URL'; // החלף ב-URL האמיתי של ה-Web App
+
+    let selectedFile = null;
+
+    // הצגת שם הקובץ הנבחר
+    document.getElementById('idUpload').addEventListener('change', function () {
+      const fileDisplay = document.getElementById('fileDisplay');
+      if (this.files.length > 0) {
+        selectedFile = this.files[0];
+        fileDisplay.textContent = `נבחר קובץ: ${selectedFile.name}`;
+      } else {
+        selectedFile = null;
+        fileDisplay.textContent = '';
+      }
+    });
+
+    document.getElementById('familyForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const form = e.target;
+      const submitBtn = form.querySelector('button[type="submit"]');
+      
+      // בדיקה שקובץ נבחר
+      if (!selectedFile) {
+        alert('אנא בחר קובץ תעודת זהות לפני השליחה');
+        return;
+      }
+      
+      // הצגת אינדיקטור טעינה
+      submitBtn.textContent = 'מעלה קובץ ושולח...';
+      submitBtn.disabled = true;
+
+      try {
+        // המרת הקובץ ל-Base64
+        const base64File = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(selectedFile);
+        });
+
+        // יצירת FormData
+        const formData = new FormData(form);
+        formData.append('fileName', selectedFile.name);
+        formData.append('fileType', selectedFile.type);
+        formData.append('fileSize', selectedFile.size);
+        formData.append('fileData', base64File);
+
+        console.log('Sending FormData:', Array.from(formData.entries()));
+
+        // שליחת הבקשה
+        const response = await fetch(SCRIPT_URL, {
+          method: 'POST',
+          body: formData
+        });
+
+        const responseText = await response.text();
+        console.log('Response:', responseText);
+        
+        let result;
+        try {
+          result = JSON.parse(responseText);
+        } catch {
+          if (responseText.includes('success') || response.ok) {
+            result = { status: 'success' };
+          } else {
+            result = { status: 'error', message: responseText };
+          }
+        }
+        
+        if (result.status === 'success' || response.ok) {
+          document.getElementById('successMessage').style.display = 'block';
+          form.reset();
+          document.getElementById('fileDisplay').textContent = '';
+          selectedFile = null;
+          document.getElementById('successMessage').scrollIntoView({ behavior: 'smooth' });
+        } else {
+          alert('אירעה שגיאה: ' + (result.message || 'שגיאה לא ידועה'));
+        }
+      } catch (error) {
+        console.error('Client Error:', error);
+        alert('אירעה שגיאה בשליחת הטופס: ' + error.message);
+      } finally {
+        submitBtn.textContent = 'שלח';
+        submitBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
