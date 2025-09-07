@@ -161,7 +161,7 @@
   <div id="successMessage">הטופס נשלח בהצלחה! תודה רבה על שיתוף הפעולה.</div>
 
   <script>
-    const SCRIPT_URL = 'YOUR_ACTUAL_WEB_APP_URL'; // החלף ב-URL האמיתי של ה-Web App
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwzHzZcpJjjbKiE1SLb61dGOq9WYBojrxh552geHt7EACsH6VbFBO77FvCG8gkxgC-p0A/exec'; // החלף ב-URL החדש של ה-Web App
 
     let selectedFile = null;
 
@@ -196,13 +196,16 @@
         // המרת הקובץ ל-Base64
         const base64File = await new Promise((resolve, reject) => {
           const reader = new FileReader();
-          reader.onload = () => resolve(reader.result);
+          reader.onload = () => resolve(reader.result.split(',')[1]); // שמירת הנתונים של Base64 בלבד
           reader.onerror = reject;
           reader.readAsDataURL(selectedFile);
         });
 
-        // יצירת FormData
-        const formData = new FormData(form);
+        // יצירת נתונים כ-URL-encoded
+        const formData = new URLSearchParams();
+        for (const [key, value] of new FormData(form)) {
+          formData.append(key, value);
+        }
         formData.append('fileName', selectedFile.name);
         formData.append('fileType', selectedFile.type);
         formData.append('fileSize', selectedFile.size);
@@ -213,7 +216,10 @@
         // שליחת הבקשה
         const response = await fetch(SCRIPT_URL, {
           method: 'POST',
-          body: formData
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+          },
+          body: formData.toString()
         });
 
         const responseText = await response.text();
