@@ -115,7 +115,7 @@
   <div class="logo-container">
     <img src="logo.png" alt="לוגו" />
   </div>
-  <form id="familyForm">
+  <form id="familyForm" novalidate>
     <label>בקשת סיוע ל:</label>
     <div class="radio-group">
       <label><input type="radio" name="aidType" value="חגי תשרי" required />חגי תשרי</label>
@@ -159,12 +159,16 @@
       בכותרת המייל יש לציין: שם המבקש + מספר תעודת זהות + ספח.
     </div>
     <div class="checkbox-group">
-      <label><input type="checkbox" id="confirmEmailSent" name="confirmEmailSent" required /> אני מאשר/ת ששלחתי את המייל עם תעודת הזהות והספח לכתובת הנ"ל</label>
+      <label>
+        <input type="checkbox" id="confirmEmailSent" name="confirmEmailSent" required />
+        אני מאשר/ת ששלחתי את המייל עם תעודת הזהות והספח לכתובת הנ"ל
+      </label>
     </div>
 
     <button type="submit">שלח</button>
   </form>
   <div id="successMessage">הטופס נשלח בהצלחה! תודה רבה על שיתוף הפעולה.</div>
+
   <script>
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwzHzZcpJjjbKiE1SLb61dGOq9WYBojrxh552geHt7EACsH6VbFBO77FvCG8gkxgC-p0A/exec';
 
@@ -172,6 +176,20 @@
       e.preventDefault();
       const form = e.target;
       const submitBtn = form.querySelector('button[type="submit"]');
+
+      // בדיקת וולידציה מובנית לדפדפן
+      if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+      }
+
+      // בדיקה שהמשתמש סימן שישלח מייל
+      const confirmEmail = form.querySelector('#confirmEmailSent');
+      if (!confirmEmail.checked) {
+        alert('אנא אשר/י ששלחת את המייל עם תעודת הזהות והספח לכתובת הנ"ל');
+        confirmEmail.focus();
+        return;
+      }
 
       submitBtn.textContent = 'שולח...';
       submitBtn.disabled = true;
@@ -193,7 +211,7 @@
         formData.append('fatherIncome', form.querySelector('#fatherIncome').value);
         formData.append('motherIncome', form.querySelector('#motherIncome').value);
         formData.append('receivesAid', form.querySelector('input[name="receivesAid"]:checked')?.value || '');
-        formData.append('confirmEmailSent', form.querySelector('#confirmEmailSent').checked ? 'כן' : 'לא');
+        formData.append('confirmEmailSent', confirmEmail.checked ? 'כן' : 'לא');
 
         const response = await fetch(SCRIPT_URL, {
           method: 'POST',
