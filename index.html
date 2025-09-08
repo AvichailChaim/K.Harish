@@ -154,15 +154,14 @@
       <label><input type="radio" name="receivesAid" value="לא" required />לא</label>
     </div>
     <label for="idUpload">חובה: יש לעלות תצלום ת.ז עם ספח</label>
-    <input type="file" id="idUpload" name="fileData" accept="image/*,application/pdf" required />
+    <input type="file" id="idUpload" name="idUpload" accept="image/*,application/pdf" required />
     <div id="fileDisplay" class="file-display"></div>
     <button type="submit">שלח</button>
   </form>
   <div id="successMessage">הטופס נשלח בהצלחה! תודה רבה על שיתוף הפעולה.</div>
 
   <script>
-    const SCRIPT_URL = 'YOUR_ACTUAL_WEB_APP_URL'; // החלף ב-URL האמיתי של ה-Web App
-
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwzHzZcpJjjbKiE1SLb61dGOq9WYBojrxh552geHt7EACsH6VbFBO77FvCG8gkxgC-p0A/exec';
     let selectedFile = null;
 
     // הצגת שם הקובץ הנבחר
@@ -193,27 +192,46 @@
       submitBtn.disabled = true;
 
       try {
-        // המרת הקובץ ל-Base64
+        // המרת הקובץ לבייס64
         const base64File = await new Promise((resolve, reject) => {
           const reader = new FileReader();
-          reader.onload = () => resolve(reader.result);
+          reader.onload = () => resolve(reader.result.split(',')[1]); // הסרת הפרפיקס
           reader.onerror = reject;
           reader.readAsDataURL(selectedFile);
         });
 
-        // יצירת FormData
-        const formData = new FormData(form);
+        // יצירת FormData (לא JSON) כדי לעקוף CORS
+        const formData = new URLSearchParams();
+        
+        // הוספת כל השדות
+        formData.append('aidType', form.querySelector('input[name="aidType"]:checked')?.value || '');
+        formData.append('email', form.querySelector('#email').value);
+        formData.append('firstName', form.querySelector('#firstName').value);
+        formData.append('lastName', form.querySelector('#lastName').value);
+        formData.append('phone', form.querySelector('#phone').value);
+        formData.append('idNumber', form.querySelector('#idNumber').value);
+        formData.append('childrenCount', form.querySelector('#childrenCount').value);
+        formData.append('street', form.querySelector('#street').value);
+        formData.append('buildingNumber', form.querySelector('#buildingNumber').value);
+        formData.append('apartmentNumber', form.querySelector('#apartmentNumber').value);
+        formData.append('ownershipStatus', form.querySelector('input[name="ownershipStatus"]:checked')?.value || '');
+        formData.append('fatherIncome', form.querySelector('#fatherIncome').value);
+        formData.append('motherIncome', form.querySelector('#motherIncome').value);
+        formData.append('receivesAid', form.querySelector('input[name="receivesAid"]:checked')?.value || '');
+        
+        // הוספת פרטי הקובץ
         formData.append('fileName', selectedFile.name);
         formData.append('fileType', selectedFile.type);
         formData.append('fileSize', selectedFile.size);
         formData.append('fileData', base64File);
 
-        console.log('Sending FormData:', Array.from(formData.entries()));
-
-        // שליחת הבקשה
+        // שליחה כ-URL encoded (לא JSON)
         const response = await fetch(SCRIPT_URL, {
           method: 'POST',
-          body: formData
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: formData.toString()
         });
 
         const responseText = await response.text();
@@ -240,8 +258,8 @@
           alert('אירעה שגיאה: ' + (result.message || 'שגיאה לא ידועה'));
         }
       } catch (error) {
-        console.error('Client Error:', error);
-        alert('אירעה שגיאה בשליחת הטופס: ' + error.message);
+        console.error('Error:', error);
+        alert('אירעה שגיאה בשליחת הטופס. אנא נסה שנית.');
       } finally {
         submitBtn.textContent = 'שלח';
         submitBtn.disabled = false;
