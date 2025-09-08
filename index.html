@@ -39,8 +39,7 @@
     input[type='tel'],
     input[type='email'],
     input[type='number'],
-    select,
-    input[type='file'] {
+    select {
       width: 100%;
       padding: 10px;
       font-size: 1em;
@@ -51,12 +50,7 @@
       color: #273c75;
       transition: border-color 0.2s;
     }
-    input[type='text']:focus,
-    input[type='tel']:focus,
-    input[type='email']:focus,
-    input[type='number']:focus,
-    select:focus,
-    input[type='file']:focus {
+    input:focus, select:focus {
       border-color: #3b4cca;
       outline: none;
       background: #f0f3ff;
@@ -71,6 +65,9 @@
       color: #273c75;
       cursor: pointer;
       user-select: none;
+    }
+    .checkbox-group {
+      margin: 15px 0;
     }
     button[type='submit'] {
       background: #3b4cca;
@@ -103,11 +100,14 @@
       font-weight: bold;
       font-size: 1.1em;
     }
-    .file-display {
+    .note {
+      font-size: 0.95em;
+      background: #fff3cd;
+      padding: 12px;
+      border: 1px solid #ffecb5;
+      border-radius: 6px;
       margin-top: 10px;
-      font-style: italic;
-      color: #666;
-      font-size: 0.9em;
+      color: #856404;
     }
   </style>
 </head>
@@ -153,57 +153,32 @@
       <label><input type="radio" name="receivesAid" value="כן" required />כן</label>
       <label><input type="radio" name="receivesAid" value="לא" required />לא</label>
     </div>
-    <label for="idUpload">חובה: יש לעלות תצלום ת.ז עם ספח</label>
-    <input type="file" id="idUpload" name="idUpload" accept="image/*,application/pdf" required />
-    <div id="fileDisplay" class="file-display"></div>
+    
+    <div class="note">
+      חובה עליך לשלוח מייל לכתובת: <strong>kh048665580@gmail.com</strong><br>
+      בכותרת המייל יש לציין: שם המבקש + מספר תעודת זהות + ספח.
+    </div>
+    <div class="checkbox-group">
+      <label><input type="checkbox" id="confirmEmailSent" name="confirmEmailSent" required /> אני מאשר/ת ששלחתי את המייל עם תעודת הזהות והספח לכתובת הנ"ל</label>
+    </div>
+
     <button type="submit">שלח</button>
   </form>
   <div id="successMessage">הטופס נשלח בהצלחה! תודה רבה על שיתוף הפעולה.</div>
-
   <script>
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwzHzZcpJjjbKiE1SLb61dGOq9WYBojrxh552geHt7EACsH6VbFBO77FvCG8gkxgC-p0A/exec';
-    let selectedFile = null;
-
-    // הצגת שם הקובץ הנבחר
-    document.getElementById('idUpload').addEventListener('change', function () {
-      const fileDisplay = document.getElementById('fileDisplay');
-      if (this.files.length > 0) {
-        selectedFile = this.files[0];
-        fileDisplay.textContent = `נבחר קובץ: ${selectedFile.name}`;
-      } else {
-        selectedFile = null;
-        fileDisplay.textContent = '';
-      }
-    });
 
     document.getElementById('familyForm').addEventListener('submit', async function (e) {
       e.preventDefault();
       const form = e.target;
       const submitBtn = form.querySelector('button[type="submit"]');
-      
-      // בדיקה שקובץ נבחר
-      if (!selectedFile) {
-        alert('אנא בחר קובץ תעודת זהות לפני השליחה');
-        return;
-      }
-      
-      // הצגת אינדיקטור טעינה
-      submitBtn.textContent = 'מעלה קובץ ושולח...';
+
+      submitBtn.textContent = 'שולח...';
       submitBtn.disabled = true;
 
       try {
-        // המרת הקובץ לבייס64
-        const base64File = await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result.split(',')[1]); // הסרת הפרפיקס
-          reader.onerror = reject;
-          reader.readAsDataURL(selectedFile);
-        });
-
-        // יצירת FormData (לא JSON) כדי לעקוף CORS
         const formData = new URLSearchParams();
-        
-        // הוספת כל השדות
+
         formData.append('aidType', form.querySelector('input[name="aidType"]:checked')?.value || '');
         formData.append('email', form.querySelector('#email').value);
         formData.append('firstName', form.querySelector('#firstName').value);
@@ -218,14 +193,8 @@
         formData.append('fatherIncome', form.querySelector('#fatherIncome').value);
         formData.append('motherIncome', form.querySelector('#motherIncome').value);
         formData.append('receivesAid', form.querySelector('input[name="receivesAid"]:checked')?.value || '');
-        
-        // הוספת פרטי הקובץ
-        formData.append('fileName', selectedFile.name);
-        formData.append('fileType', selectedFile.type);
-        formData.append('fileSize', selectedFile.size);
-        formData.append('fileData', base64File);
+        formData.append('confirmEmailSent', form.querySelector('#confirmEmailSent').checked ? 'כן' : 'לא');
 
-        // שליחה כ-URL encoded (לא JSON)
         const response = await fetch(SCRIPT_URL, {
           method: 'POST',
           headers: {
@@ -236,23 +205,20 @@
 
         const responseText = await response.text();
         console.log('Response:', responseText);
-        
+
         let result;
         try {
           result = JSON.parse(responseText);
         } catch {
-          if (responseText.includes('success') || response.ok) {
+          if (response.ok) {
             result = { status: 'success' };
           } else {
             result = { status: 'error', message: responseText };
           }
         }
-        
-        if (result.status === 'success' || response.ok) {
+        if (result.status === 'success') {
           document.getElementById('successMessage').style.display = 'block';
           form.reset();
-          document.getElementById('fileDisplay').textContent = '';
-          selectedFile = null;
           document.getElementById('successMessage').scrollIntoView({ behavior: 'smooth' });
         } else {
           alert('אירעה שגיאה: ' + (result.message || 'שגיאה לא ידועה'));
