@@ -5,6 +5,7 @@
   <title>טופס פרטי משפחה</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
+    /* כל סגנונות העיצוב כמו בגרסה הקודמת */
     body {
       background: #d0d8f9;
       font-family: 'Assistant', Arial, sans-serif;
@@ -36,8 +37,8 @@
       color: #273c75;
     }
     input[type='text'],
-    input[type='tel'],
     input[type='email'],
+    input[type='tel'],
     input[type='number'],
     select {
       width: 100%;
@@ -51,8 +52,8 @@
       transition: border-color 0.2s;
     }
     input[type='text']:focus,
-    input[type='tel']:focus,
     input[type='email']:focus,
+    input[type='tel']:focus,
     input[type='number']:focus,
     select:focus {
       border-color: #3b4cca;
@@ -70,7 +71,7 @@
       cursor: pointer;
       user-select: none;
     }
-    button[type='submit'] {
+    button[type='submit'], button.share-drive-btn {
       background: #3b4cca;
       color: white;
       border: none;
@@ -85,13 +86,10 @@
       box-shadow: 0 2px 8px rgba(59, 76, 202, 0.3);
       transition: background 0.2s, color 0.2s;
     }
-    button[type='submit']:hover {
+    button[type='submit']:hover,
+    button.share-drive-btn:hover {
       background: #2d3699;
       color: #eef2ff;
-    }
-    button[type='submit']:disabled {
-      background: #ccc;
-      cursor: not-allowed;
     }
     #successMessage {
       display: none;
@@ -117,11 +115,8 @@
       font-weight: bold;
       font-size: 1.1em;
     }
-    .instructions {
-      font-size: 0.9em;
-      color: #666;
-      margin-bottom: 12px;
-      line-height: 1.4;
+    .file-link-input {
+      margin-top: 10px;
     }
   </style>
 </head>
@@ -130,6 +125,7 @@
     <img src="logo.png" alt="לוגו" />
   </div>
   <form id="familyForm">
+    <!-- שדות הטופס הרגילים ממשיכים כאן -->
     <label>בקשת סיוע ל:</label>
     <div class="radio-group">
       <label><input type="radio" name="aidType" value="חגי תשרי" required />חגי תשרי</label>
@@ -168,24 +164,27 @@
       <label><input type="radio" name="receivesAid" value="לא" required />לא</label>
     </div>
 
-    <label for="driveFileLink">חובה: יש להעלות תצלום ת.ז עם ספח לגוגל דרייב ולשתף איתנו.</label>
-    <div class="instructions">
-      <p>1. העלה את תצלום תעודת הזהות עם הספח לגוגל דרייב האישי שלך.</p>
-      <p>2. לחץ על הקובץ ב-Drive, לחץ על 'שתף', ותן הרשאת עריכה למייל: <strong>kh048665580@gmail.com</strong></p>
-      <p>3. העתק את קישור השיתוף והדבק אותו כאן מתחת:</p>
-    </div>
-    <input type="url" id="driveFileLink" name="driveFileLink" required placeholder="הדבק כאן את קישור השיתוף מדיסק Google Drive" />
+    <label for="driveFileLink">חובה: יש להעלות תצלום ת.ז עם ספח לגוגל דרייב ולהדביק כאן את הקישור לשיתוף:</label>
+    <button type="button" class="share-drive-btn" id="openDriveBtn">פתח את Google Drive שלי</button>
+    <input type="url" id="driveFileLink" name="driveFileLink" placeholder="הדבק כאן את קישור השיתוף של הקובץ" class="file-link-input" required />
     
     <button type="submit">שלח</button>
   </form>
+
   <div id="successMessage">הטופס נשלח בהצלחה! תודה רבה על שיתוף הפעולה.</div>
   <div id="errorMessage"></div>
 
   <script>
-    // *** שנה את ה-URL לכתובת החדשה של ה-Web App שלך ***
-    const SCRIPT_URL = 'https://script.google.com/macros/s/YOUR_NEW_WEB_APP_URL_HERE/exec';
+    const openDriveBtn = document.getElementById('openDriveBtn');
+    const driveFileLinkInput = document.getElementById('driveFileLink');
 
-    document.getElementById('familyForm').addEventListener('submit', async function (e) {
+    openDriveBtn.addEventListener('click', () => {
+      // פתח חלון חדש של Google Drive בשביל המשתמש לנהל את הקבצים האישיים שלו
+      // המשתמש אמור להעלות את הקובץ שם ואז לקבל ממנו קישור שיתוף
+      window.open('https://drive.google.com/drive/my-drive', '_blank');
+    });
+
+    document.getElementById('familyForm').addEventListener('submit', async function(e) {
       e.preventDefault();
 
       const form = e.target;
@@ -196,41 +195,40 @@
       errorDiv.style.display = 'none';
       successDiv.style.display = 'none';
 
-      // בדיקת תקינות קישור
-      const linkInput = document.getElementById('driveFileLink');
-      if (!linkInput.value.trim()) {
-        errorDiv.textContent = 'אנא הדבק את קישור שיתוף הגוגל דרייב של תעודת הזהות';
+      // בדיקת קישור שיתוף
+      if (!driveFileLinkInput.value.trim()) {
+        errorDiv.textContent = 'חובה לצרף קישור שיתוף תקין לתצלום ת.ז עם ספח.';
         errorDiv.style.display = 'block';
+        driveFileLinkInput.focus();
         return;
       }
+
+      // יכול להוסיף כאן בדיקה פשוטה של קישור שיתוף בגוגל דרייב (אופציונלי)
 
       submitBtn.textContent = 'שולח...';
       submitBtn.disabled = true;
 
       try {
         const formData = new FormData(form);
-        const response = await fetch(SCRIPT_URL, {
+        
+        const response = await fetch('https://script.google.com/macros/s/YOUR_NEW_WEB_APP_URL_HERE/exec', {
           method: 'POST',
           body: formData
         });
-        const responseText = await response.text();
-        let result;
-        try {
-          result = JSON.parse(responseText);
-        } catch (err) {
-          result = {status: 'error', message: 'תגובה לא תקינה מהשרת'};
-        }
 
-        if (result.status === 'success') {
+        const json = await response.json();
+
+        if(json.status === 'success') {
           successDiv.style.display = 'block';
           form.reset();
+          driveFileLinkInput.value = '';
           successDiv.scrollIntoView({ behavior: 'smooth' });
         } else {
-          errorDiv.textContent = 'אירעה שגיאה: ' + (result.message || 'שגיאה לא ידועה');
+          errorDiv.textContent = 'אירעה שגיאה: ' + (json.message || 'שגיאה לא ידועה');
           errorDiv.style.display = 'block';
         }
-      } catch (error) {
-        errorDiv.textContent = 'אירעה שגיאה בשליחת הטופס: ' + error.message;
+      } catch (err) {
+        errorDiv.textContent = 'אירעה שגיאה בשליחת הטופס: ' + err.message;
         errorDiv.style.display = 'block';
       } finally {
         submitBtn.textContent = 'שלח';
