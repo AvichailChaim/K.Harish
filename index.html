@@ -5,6 +5,7 @@
   <title>טופס פרטי משפחה</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
+    /* אותו CSS כמו בקוד שסיפקת */
     body {
       background: #d0d8f9;
       font-family: 'Assistant', Arial, sans-serif;
@@ -161,67 +162,46 @@
       <label><input type="radio" name="receivesAid" value="כן" required />כן</label>
       <label><input type="radio" name="receivesAid" value="לא" required />לא</label>
     </div>
-    <label for="driveFileLink">קישור לשיתוף הקובץ בגוגל דרייב (הדבק כאן):</label>
+    <label for="driveFileLink">העתק כאן את קישור השיתוף של המסמך מגוגל דרייב</label>
     <input type="text" id="driveFileLink" name="driveFileLink" placeholder="https://drive.google.com/..." required />
+    <small>אנא שים לב: יש לשתף את הקובץ עם המייל kh048665580@gmail.com עם הרשאות עריכה לפני ההדבקה</small>
     <button type="submit">שלח</button>
   </form>
   <div id="successMessage">הטופס נשלח בהצלחה! תודה רבה על שיתוף הפעולה.</div>
   <div id="errorMessage"></div>
 
   <script>
-    const SCRIPT_URL = 'https://script.google.com/macros/s/YOUR_NEW_WEB_APP_URL_HERE/exec';
+    const SCRIPT_URL = 'https://script.google.com/macros/s/YOUR_NEW_DEPLOYED_WEB_APP_URL/exec';
+    const form = document.getElementById('familyForm');
+    const errorDiv = document.getElementById('errorMessage');
+    const successDiv = document.getElementById('successMessage');
 
-    document.getElementById('familyForm').addEventListener('submit', async function (e) {
+    form.addEventListener('submit', async (e) => {
       e.preventDefault();
-
-      const form = e.target;
-      const submitBtn = form.querySelector('button[type="submit"]');
-      const errorDiv = document.getElementById('errorMessage');
-      const successDiv = document.getElementById('successMessage');
-
       errorDiv.style.display = 'none';
       successDiv.style.display = 'none';
 
-      // ודא שהקישור מוזן
-      const driveFileLink = form.driveFileLink.value.trim();
-      if (!driveFileLink) {
-        errorDiv.textContent = 'אנא הזן קישור לתיקיית או קובץ שיתוף בגוגל דרייב';
-        errorDiv.style.display = 'block';
-        return;
-      }
-
-      submitBtn.textContent = 'שולח...';
-      submitBtn.disabled = true;
+      const formData = new FormData(form);
 
       try {
-        const formData = new FormData(form);
         const response = await fetch(SCRIPT_URL, {
           method: 'POST',
           body: formData
         });
 
-        const responseText = await response.text();
-        let result;
-        try {
-          result = JSON.parse(responseText);
-        } catch (err) {
-          result = { status: 'error', message: 'תגובה לא תקינה מהשרת' };
-        }
+        const result = await response.json();
 
         if (result.status === 'success') {
           successDiv.style.display = 'block';
           form.reset();
-          successDiv.scrollIntoView({ behavior: 'smooth' });
+          form.scrollIntoView({ behavior: 'smooth' });
         } else {
-          errorDiv.textContent = 'אירעה שגיאה: ' + (result.message || 'שגיאה לא ידועה');
+          errorDiv.textContent = result.message || 'שגיאה לא צפויה';
           errorDiv.style.display = 'block';
         }
       } catch (error) {
-        errorDiv.textContent = 'אירעה שגיאה בשליחת הטופס: ' + error.message;
+        errorDiv.textContent = 'שגיאה בשליחת הנתונים: ' + error.message;
         errorDiv.style.display = 'block';
-      } finally {
-        submitBtn.textContent = 'שלח';
-        submitBtn.disabled = false;
       }
     });
   </script>
