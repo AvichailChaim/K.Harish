@@ -159,11 +159,10 @@
       בכותרת המייל יש לציין: שם המבקש + לצרף למייל - צילום תעודת זהות וספח - 
       פרט חשוב שבלעדיו לא נקבל את הבקשה!
     </div>
-    <div class="checkbox-group">
-      <label>
-        <input type="checkbox" id="confirmEmailSent" name="confirmEmailSent" required />
-        אני מאשר/ת ששלחתי את המייל עם תעודת הזהות והספח לכתובת הנ"ל
-      </label>
+    <label>האם שלחת את המסמכים במייל?</label>
+    <div class="radio-group">
+      <label><input type="radio" name="confirmEmailSent" value="כן" required />כן</label>
+      <label><input type="radio" name="confirmEmailSent" value="לא" required />לא</label>
     </div>
     <button type="submit">שלח</button>
   </form>
@@ -176,12 +175,6 @@
       const submitBtn = form.querySelector('button[type="submit"]');
       if (!form.checkValidity()) {
         form.reportValidity();
-        return;
-      }
-      const confirmEmail = form.querySelector('#confirmEmailSent');
-      if (!confirmEmail.checked) {
-        alert('אנא אשר/י ששלחת את המייל עם תעודת הזהות והספח לכתובת הנ"ל');
-        confirmEmail.focus();
         return;
       }
       submitBtn.textContent = 'שולח...';
@@ -202,9 +195,9 @@
         formData.append('fatherIncome', form.querySelector('#fatherIncome').value);
         formData.append('motherIncome', form.querySelector('#motherIncome').value);
         formData.append('receivesAid', form.querySelector('input[name="receivesAid"]:checked')?.value || '');
-        formData.append('confirmEmailSent', confirmEmail.checked ? 'כן' : 'לא');
-        // שליחת סטטוס שלח מסמך או לא בהתאם לסימון
-        formData.append('sendDocument', confirmEmail.checked ? 'שלח מסמך' : 'לא שלח');
+        const confirmEmailSentValue = form.querySelector('input[name="confirmEmailSent"]:checked')?.value;
+        formData.append('confirmEmailSent', confirmEmailSentValue || '');
+        console.log('Form Data sent: ', formData.toString()); // Add logging to browser console
         const response = await fetch(SCRIPT_URL, {
           method: 'POST',
           headers: {
