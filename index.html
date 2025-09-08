@@ -130,7 +130,7 @@
     <label for="phone">מספר פלאפון:</label>
     <input type="tel" id="phone" name="phone" required />
     <label for="idNumber">מספר תעודת זהות:</label>
-    <input type="text" id="idNumber" name="idNumber" required pattern="^\\d{9}$" inputmode="numeric" title="אנא הזן בדיוק 9 ספרות" />
+    <input type="text" id="idNumber" name="idNumber" required pattern="^\d{9}$" inputmode="numeric" title="אנא הזן בדיוק 9 ספרות" oninput="this.value=this.value.replace(/\D/g,'');" />
     <label for="childrenCount">מספר ילדים (עד גיל 18):</label>
     <input type="number" id="childrenCount" name="childrenCount" min="0" required />
     <label for="street">רחוב:</label>
@@ -174,12 +174,10 @@
       e.preventDefault();
       const form = e.target;
       const submitBtn = form.querySelector('button[type="submit"]');
-      // בדיקת וולידציה מובנית לדפדפן
       if (!form.checkValidity()) {
         form.reportValidity();
         return;
       }
-      // בדיקה שהמשתמש סימן שישלח מייל
       const confirmEmail = form.querySelector('#confirmEmailSent');
       if (!confirmEmail.checked) {
         alert('אנא אשר/י ששלחת את המייל עם תעודת הזהות והספח לכתובת הנ"ל');
@@ -204,7 +202,8 @@
         formData.append('fatherIncome', form.querySelector('#fatherIncome').value);
         formData.append('motherIncome', form.querySelector('#motherIncome').value);
         formData.append('receivesAid', form.querySelector('input[name="receivesAid"]:checked')?.value || '');
-        // כאן מוסיפים לשלוח או לא לשלוח בהתאם לסימון
+        formData.append('confirmEmailSent', confirmEmail.checked ? 'כן' : 'לא');
+        // שליחת סטטוס שלח מסמך או לא בהתאם לסימון
         formData.append('sendDocument', confirmEmail.checked ? 'שלח מסמך' : 'לא שלח');
         const response = await fetch(SCRIPT_URL, {
           method: 'POST',
