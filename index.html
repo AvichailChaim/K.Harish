@@ -5,7 +5,6 @@
   <title>טופס פרטי משפחה</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    /* כל סגנונות העיצוב כמו בגרסה הקודמת */
     body {
       background: #d0d8f9;
       font-family: 'Assistant', Arial, sans-serif;
@@ -37,8 +36,8 @@
       color: #273c75;
     }
     input[type='text'],
-    input[type='email'],
     input[type='tel'],
+    input[type='email'],
     input[type='number'],
     select {
       width: 100%;
@@ -52,8 +51,8 @@
       transition: border-color 0.2s;
     }
     input[type='text']:focus,
-    input[type='email']:focus,
     input[type='tel']:focus,
+    input[type='email']:focus,
     input[type='number']:focus,
     select:focus {
       border-color: #3b4cca;
@@ -71,7 +70,7 @@
       cursor: pointer;
       user-select: none;
     }
-    button[type='submit'], button.share-drive-btn {
+    button[type='submit'] {
       background: #3b4cca;
       color: white;
       border: none;
@@ -86,10 +85,13 @@
       box-shadow: 0 2px 8px rgba(59, 76, 202, 0.3);
       transition: background 0.2s, color 0.2s;
     }
-    button[type='submit']:hover,
-    button.share-drive-btn:hover {
+    button[type='submit']:hover {
       background: #2d3699;
       color: #eef2ff;
+    }
+    button[type='submit']:disabled {
+      background: #ccc;
+      cursor: not-allowed;
     }
     #successMessage {
       display: none;
@@ -115,8 +117,12 @@
       font-weight: bold;
       font-size: 1.1em;
     }
-    .file-link-input {
+    .file-link-container {
       margin-top: 10px;
+      font-style: italic;
+      font-size: 0.9em;
+      color: #3b4cca;
+      word-break: break-all;
     }
   </style>
 </head>
@@ -125,7 +131,6 @@
     <img src="logo.png" alt="לוגו" />
   </div>
   <form id="familyForm">
-    <!-- שדות הטופס הרגילים ממשיכים כאן -->
     <label>בקשת סיוע ל:</label>
     <div class="radio-group">
       <label><input type="radio" name="aidType" value="חגי תשרי" required />חגי תשרי</label>
@@ -164,77 +169,126 @@
       <label><input type="radio" name="receivesAid" value="לא" required />לא</label>
     </div>
 
-    <label for="driveFileLink">חובה: יש להעלות תצלום ת.ז עם ספח לגוגל דרייב ולהדביק כאן את הקישור לשיתוף:</label>
-    <button type="button" class="share-drive-btn" id="openDriveBtn">פתח את Google Drive שלי</button>
-    <input type="url" id="driveFileLink" name="driveFileLink" placeholder="הדבק כאן את קישור השיתוף של הקובץ" class="file-link-input" required />
-    
-    <button type="submit">שלח</button>
+    <label>חובה: יש להעלות תצלום ת.ז עם ספח דרך הכפתור למטה</label>
+    <button type="button" id="uploadBtn" style="width:100%; padding:12px; border-radius:10px; background:#3b4cca; color:white; font-weight:bold; margin-top:10px; cursor:pointer;">העלה את תצלום ת.ז עם ספח לגוגל דרייב</button>
+
+    <div id="fileLinkContainer" class="file-link-container"></div>
+
+    <button type="submit" style="margin-top:20px;">שלח</button>
   </form>
 
   <div id="successMessage">הטופס נשלח בהצלחה! תודה רבה על שיתוף הפעולה.</div>
   <div id="errorMessage"></div>
 
-  <script>
-    const openDriveBtn = document.getElementById('openDriveBtn');
-    const driveFileLinkInput = document.getElementById('driveFileLink');
+<script>
+  // קישור לסקריפט ה-Google Apps Script (שיש להגדיר לשרת)
+  const SCRIPT_URL = 'https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec';
 
-    openDriveBtn.addEventListener('click', () => {
-      // פתח חלון חדש של Google Drive בשביל המשתמש לנהל את הקבצים האישיים שלו
-      // המשתמש אמור להעלות את הקובץ שם ואז לקבל ממנו קישור שיתוף
-      window.open('https://drive.google.com/drive/my-drive', '_blank');
-    });
+  let uploadedFileUrl = '';
 
-    document.getElementById('familyForm').addEventListener('submit', async function(e) {
-      e.preventDefault();
-
-      const form = e.target;
-      const submitBtn = form.querySelector('button[type="submit"]');
-      const errorDiv = document.getElementById('errorMessage');
-      const successDiv = document.getElementById('successMessage');
-
-      errorDiv.style.display = 'none';
-      successDiv.style.display = 'none';
-
-      // בדיקת קישור שיתוף
-      if (!driveFileLinkInput.value.trim()) {
-        errorDiv.textContent = 'חובה לצרף קישור שיתוף תקין לתצלום ת.ז עם ספח.';
-        errorDiv.style.display = 'block';
-        driveFileLinkInput.focus();
-        return;
+  document.getElementById('uploadBtn').addEventListener('click', () => {
+    // פותח את תיבת דיאלוג בחירת קובץ של גוגל דרייב
+    google.script.run.withSuccessHandler(fileUrl => {
+      if (fileUrl) {
+        uploadedFileUrl = fileUrl;
+        const container = document.getElementById('fileLinkContainer');
+        container.innerHTML = `<a href="${uploadedFileUrl}" target="_blank" rel="noopener">קישור לתצלום ת.ז שהועלה</a>`;
       }
+    }).openDrivePicker();
+  });
 
-      // יכול להוסיף כאן בדיקה פשוטה של קישור שיתוף בגוגל דרייב (אופציונלי)
+  document.getElementById('familyForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    const errorDiv = document.getElementById('errorMessage');
+    const successDiv = document.getElementById('successMessage');
+    errorDiv.style.display = 'none';
+    successDiv.style.display = 'none';
 
-      submitBtn.textContent = 'שולח...';
-      submitBtn.disabled = true;
+    if (!uploadedFileUrl) {
+      errorDiv.textContent = 'חובה להעלות תצלום ת.ז עם ספח לפני שליחת הטופס';
+      errorDiv.style.display = 'block';
+      return;
+    }
 
-      try {
-        const formData = new FormData(form);
-        
-        const response = await fetch('https://script.google.com/macros/s/YOUR_NEW_WEB_APP_URL_HERE/exec', {
-          method: 'POST',
-          body: formData
-        });
+    const formData = new FormData(this);
+    formData.append('driveFileUrl', uploadedFileUrl);
 
-        const json = await response.json();
+    const plainObj = {};
+    formData.forEach((value, key) => plainObj[key] = value);
 
-        if(json.status === 'success') {
-          successDiv.style.display = 'block';
-          form.reset();
-          driveFileLinkInput.value = '';
-          successDiv.scrollIntoView({ behavior: 'smooth' });
-        } else {
-          errorDiv.textContent = 'אירעה שגיאה: ' + (json.message || 'שגיאה לא ידועה');
-          errorDiv.style.display = 'block';
-        }
-      } catch (err) {
-        errorDiv.textContent = 'אירעה שגיאה בשליחת הטופס: ' + err.message;
+    try {
+      const response = await fetch(SCRIPT_URL, {
+        method: 'POST',
+        body: JSON.stringify(plainObj),
+        headers: {'Content-Type': 'application/json'}
+      });
+      const result = await response.json();
+
+      if (result.status === 'success') {
+        successDiv.style.display = 'block';
+        this.reset();
+        uploadedFileUrl = '';
+        document.getElementById('fileLinkContainer').innerHTML = '';
+        successDiv.scrollIntoView({ behavior: 'smooth' });
+      } else {
+        errorDiv.textContent = result.message || 'שגיאה לא ידועה';
         errorDiv.style.display = 'block';
-      } finally {
-        submitBtn.textContent = 'שלח';
-        submitBtn.disabled = false;
       }
-    });
-  </script>
+    } catch (err) {
+      errorDiv.textContent = 'שגיאה בשליחת הטופס: ' + err.message;
+      errorDiv.style.display = 'block';
+    }
+  });
+</script>
+
+<script src="https://apis.google.com/js/api.js"></script>
+<script>
+  // JavaScript לטיפול ב-Picker של Google Drive, פתיחתו, והעלאה עם שיתוף אוטומטי למייל
+
+  let pickerApiLoaded = false;
+  let oauthToken = '';
+
+  function loadPicker() {
+    gapi.load('auth', {'callback': onAuthApiLoad});
+    gapi.load('picker', {'callback': onPickerApiLoad});
+  }
+
+  function onAuthApiLoad() {
+    // כאן צריך להפעיל אישור OAuth לקבלת Token
+    // מסתמך על הפעלת OAuth בסקריפט Google Apps Script עצמו או אפליקציית Web App בשתי הפעולות
+  }
+
+  function onPickerApiLoad() {
+    pickerApiLoaded = true;
+  }
+
+  function openPicker() {
+    if (!pickerApiLoaded || !oauthToken) {
+      alert('מחכה לטעינת Picker או לאישור משתמש...');
+      return;
+    }
+
+    const picker = new google.picker.PickerBuilder()
+      .addView(google.picker.ViewId.DOCS)
+      .setOAuthToken(oauthToken)
+      .setDeveloperKey('YOUR_DEVELOPER_KEY')
+      .setCallback(pickerCallback)
+      .build();
+
+    picker.setVisible(true);
+  }
+
+  function pickerCallback(data) {
+    if (data.action === google.picker.Action.PICKED) {
+      let file = data.docs[0];
+      // כאן אפשרתת לשלוח לשרת או להציג קישור
+      const fileUrl = file.url;
+      document.getElementById('fileLinkContainer').innerHTML = `<a href="${fileUrl}" target="_blank">${file.name}</a>`;
+      uploadedFileUrl = fileUrl;
+    }
+  }
+
+  // צריך לטפל באישור OAuth בשרת Google Apps Script
+</script>
 </body>
 </html>
