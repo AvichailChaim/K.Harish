@@ -39,7 +39,8 @@
     input[type='tel'],
     input[type='email'],
     input[type='number'],
-    select {
+    select,
+    input[type='file'] {
       width: 100%;
       padding: 10px;
       font-size: 1em;
@@ -54,7 +55,8 @@
     input[type='tel']:focus,
     input[type='email']:focus,
     input[type='number']:focus,
-    select:focus {
+    select:focus,
+    input[type='file']:focus {
       border-color: #3b4cca;
       outline: none;
       background: #f0f3ff;
@@ -123,11 +125,29 @@
       color: #666;
       font-size: 0.9em;
     }
-    a.file-link {
-      color: #3b4cca;
-      word-break: break-all;
-      display: block;
-      margin-top: 10px;
+    .upload-note {
+      background: #e8f4fd;
+      border: 1px solid #1976d2;
+      border-radius: 8px;
+      padding: 12px;
+      margin: 10px 0;
+      font-size: 0.9em;
+      color: #1976d2;
+    }
+    .progress-bar {
+      display: none;
+      width: 100%;
+      height: 20px;
+      background-color: #f0f3ff;
+      border-radius: 10px;
+      margin: 10px 0;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background-color: #3b4cca;
+      border-radius: 10px;
+      transition: width 0.3s ease;
     }
   </style>
 </head>
@@ -173,98 +193,161 @@
       <label><input type="radio" name="receivesAid" value="כן" required />כן</label>
       <label><input type="radio" name="receivesAid" value="לא" required />לא</label>
     </div>
-    <label>חובה: יש להעלות תצלום ת.ז עם ספח</label>
-    <input type="file" id="idUpload" name="file" accept="image/*,application/pdf" required />
-    <div id="fileLinkContainer" class="file-display"></div>
+    <label for="idUpload">חובה: יש להעלות תצלום ת.ז עם ספח</label>
+    <div class="upload-note">
+      הקובץ יישמר אוטומטית ב-Google Drive ויישלח למייל kh048665580@gmail.com
+    </div>
+    <input type="file" id="idUpload" name="fileData" accept="image/*,application/pdf" required />
+    <div id="fileDisplay" class="file-display"></div>
+    <div id="progressBar" class="progress-bar">
+      <div id="progressFill" class="progress-fill"></div>
+    </div>
     <button type="submit">שלח</button>
   </form>
-  <div id="successMessage">הטופס נשלח בהצלחה! תודה רבה על שיתוף הפעולה.</div>
+  <div id="successMessage">הטופס נשלח בהצלחה! המסמך נשמר ונשלח למייל. תודה רבה על שיתוף הפעולה.</div>
   <div id="errorMessage"></div>
-
   <script>
-    const form = document.getElementById('familyForm');
-    const fileInput = document.getElementById('idUpload');
-    const fileLinkContainer = document.getElementById('fileLinkContainer');
-    const successDiv = document.getElementById('successMessage');
-    const errorDiv = document.getElementById('errorMessage');
+    // *** שנה את ה-URL לכתובת החדשה של ה-Web App שלך ***
+    const SCRIPT_URL = 'https://script.google.com/macros/s/YOUR_NEW_WEB_APP_URL_HERE/exec';
+    let selectedFile = null;
     
-    let uploadedFileUrl = '';
-
-    form.addEventListener('submit', (e) => {
+    // הצגת שם הקובץ הנבחר
+    document.getElementById('idUpload').addEventListener('change', function () {
+      const fileDisplay = document.getElementById('fileDisplay');
+      if (this.files.length > 0) {
+        selectedFile = this.files[0];
+        fileDisplay.textContent = `נבחר קובץ: ${selectedFile.name} (${(selectedFile.size / 1024 / 1024).toFixed(2)} MB)`;
+      } else {
+        selectedFile = null;
+        fileDisplay.textContent = '';
+      }
+    });
+    
+    // פונקציה להצגת התקדמות
+    function updateProgress(percent) {
+      const progressBar = document.getElementById('progressBar');
+      const progressFill = document.getElementById('progressFill');
+      progressBar.style.display = 'block';
+      progressFill.style.width = percent + '%';
+    }
+    
+    document.getElementById('familyForm').addEventListener('submit', async function (e) {
       e.preventDefault();
+      console.log('Form submission started');
+      
+      const form = e.target;
+      const submitBtn = form.querySelector('button[type="submit"]');
+      const errorDiv = document.getElementById('errorMessage');
+      const successDiv = document.getElementById('successMessage');
+      
+      // הסתרת הודעות קודמות
       errorDiv.style.display = 'none';
       successDiv.style.display = 'none';
       
-      if (!uploadedFileUrl) {
-        errorDiv.textContent = 'חובה להעלות את תצלום ת.ז עם ספח לפני השליחה';
+      // בדיקה שקובץ נבחר
+      if (!selectedFile) {
+        errorDiv.textContent = 'אנא בחר קובץ תעודת זהות לפני השליחה';
         errorDiv.style.display = 'block';
         return;
       }
       
-      // אסוף את כל שדות הטופס
-      const formData = new FormData(form);
-      formData.append('driveFileUrl', uploadedFileUrl);
-
-      // שלח את הנתונים לשרת Apps Script
-      fetch('https://script.google.com/macros/s/YOUR_WEB_APP_ID/exec', {
-        method: 'POST',
-        body: formData
-      }).then(async res => {
-        const text = await res.text();
+      // בדיקת גודל קובץ (מקסימום 10MB)
+      if (selectedFile.size > 10 * 1024 * 1024) {
+        errorDiv.textContent = 'גודל הקובץ גדול מדי. אנא בחר קובץ קטן מ-10MB';
+        errorDiv.style.display = 'block';
+        return;
+      }
+      
+      // הצגת אינדיקטור טעינה
+      submitBtn.textContent = 'מעלה קובץ ושולח...';
+      submitBtn.disabled = true;
+      updateProgress(10);
+      
+      try {
+        console.log('Processing file:', selectedFile.name);
+        updateProgress(30);
+        
+        // המרת הקובץ ל-Base64
+        const base64File = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const result = reader.result;
+            console.log('FileReader result:', result.substring(0, 100) + '...');
+            resolve(result.split(',')[1]); // שמירת הנתונים של Base64 בלבד
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(selectedFile);
+        });
+        
+        console.log('File converted to base64, length:', base64File.length);
+        updateProgress(60);
+        
+        // יצירת נתונים כ-FormData
+        const formData = new FormData(form);
+        
+        // הוספת נתוני הקובץ
+        formData.append('fileName', selectedFile.name);
+        formData.append('fileType', selectedFile.type);
+        formData.append('fileSize', selectedFile.size.toString());
+        formData.append('fileData', base64File);
+        formData.append('recipientEmail', 'kh048665580@gmail.com'); // המייל שאליו לשלוח
+        
+        console.log('FormData prepared, sending to:', SCRIPT_URL);
+        updateProgress(80);
+        
+        // שליחת הבקשה
+        const response = await fetch(SCRIPT_URL, {
+          method: 'POST',
+          body: formData
+        });
+        
+        console.log('Response status:', response.status);
+        updateProgress(90);
+        
+        const responseText = await response.text();
+        console.log('Response text:', responseText);
+        
         let result;
         try {
-          result = JSON.parse(text);
-        } catch {
-          result = { status: 'error', message: 'תגובה לא תקינה מהשרת' };
+          result = JSON.parse(responseText);
+        } catch (parseError) {
+          console.log('Failed to parse JSON response:', parseError);
+          if (responseText.includes('success') || response.ok) {
+            result = { status: 'success' };
+          } else {
+            result = { status: 'error', message: responseText };
+          }
         }
-        if (result.status === 'success') {
+        
+        updateProgress(100);
+        
+        if (result.status === 'success' || response.ok) {
           successDiv.style.display = 'block';
           form.reset();
-          fileLinkContainer.textContent = '';
-          uploadedFileUrl = '';
+          document.getElementById('fileDisplay').textContent = '';
+          selectedFile = null;
           successDiv.scrollIntoView({ behavior: 'smooth' });
+          
+          // הסתרת סרגל התקדמות אחרי 2 שניות
+          setTimeout(() => {
+            document.getElementById('progressBar').style.display = 'none';
+          }, 2000);
         } else {
-          errorDiv.textContent = 'שגיאה בשליחה: ' + (result.message || 'שגיאה לא ידועה');
+          errorDiv.textContent = 'אירעה שגיאה: ' + (result.message || 'שגיאה לא ידועה');
           errorDiv.style.display = 'block';
         }
-      }).catch(err => {
-        errorDiv.textContent = 'שגיאה בשליחה: ' + err.message;
+      } catch (error) {
+        console.error('Client Error:', error);
+        errorDiv.textContent = 'אירעה שגיאה בשליחת הטופס: ' + error.message;
         errorDiv.style.display = 'block';
-      });
-    });
-
-    fileInput.addEventListener('change', () => {
-      const file = fileInput.files[0];
-      if (!file) {
-        fileLinkContainer.textContent = '';
-        uploadedFileUrl = '';
-        return;
+      } finally {
+        submitBtn.textContent = 'שלח';
+        submitBtn.disabled = false;
+        // הסתרת סרגל התקדמות במקרה של שגיאה
+        setTimeout(() => {
+          document.getElementById('progressBar').style.display = 'none';
+        }, 1000);
       }
-      errorDiv.style.display = 'none';
-      successDiv.style.display = 'none';
-      fileLinkContainer.textContent = 'מעלה קובץ ל-Google Drive, אנא המתן...';
-
-      // הפעולה תשלח לאפליקציית Apps Script כדי להעלות את הקובץ ל-Drive
-      const reader = new FileReader();
-      reader.onload = function(event) {
-        const base64 = event.target.result.split(',')[1];
-        google.script.run.withSuccessHandler(function(fileUrl) {
-          uploadedFileUrl = fileUrl;
-          fileLinkContainer.innerHTML = `קובץ הועלה בהצלחה: <a href="${fileUrl}" target="_blank" class="file-link">${file.name}</a>`;
-        }).withFailureHandler(function(msg) {
-          errorDiv.textContent = 'אירעה שגיאה בהעלאת הקובץ: ' + msg;
-          errorDiv.style.display = 'block';
-          fileLinkContainer.textContent = '';
-          uploadedFileUrl = '';
-        }).uploadFileToDrive(base64, file.name, file.type);
-      };
-      reader.onerror = function(err) {
-        errorDiv.textContent = 'אירעה שגיאה בקבלת הקובץ: ' + err.message;
-        errorDiv.style.display = 'block';
-        fileLinkContainer.textContent = '';
-        uploadedFileUrl = '';
-      };
-      reader.readAsDataURL(file);
     });
   </script>
 </body>
