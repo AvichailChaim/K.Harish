@@ -39,8 +39,7 @@
     input[type='tel'],
     input[type='email'],
     input[type='number'],
-    select,
-    input[type='file'] {
+    select {
       width: 100%;
       padding: 10px;
       font-size: 1em;
@@ -55,8 +54,7 @@
     input[type='tel']:focus,
     input[type='email']:focus,
     input[type='number']:focus,
-    select:focus,
-    input[type='file']:focus {
+    select:focus {
       border-color: #3b4cca;
       outline: none;
       background: #f0f3ff;
@@ -91,6 +89,10 @@
       background: #2d3699;
       color: #eef2ff;
     }
+    button[type='submit']:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
     #successMessage {
       display: none;
       background: #e7f6e7;
@@ -103,11 +105,17 @@
       font-weight: bold;
       font-size: 1.1em;
     }
-    .file-display {
-      margin-top: 10px;
-      font-style: italic;
-      color: #666;
-      font-size: 0.9em;
+    #errorMessage {
+      display: none;
+      background: #ffe7e7;
+      color: #d63031;
+      padding: 18px;
+      border-radius: 10px;
+      border: 1.5px solid #d63031;
+      margin-top: 18px;
+      text-align: center;
+      font-weight: bold;
+      font-size: 1.1em;
     }
   </style>
 </head>
@@ -153,101 +161,64 @@
       <label><input type="radio" name="receivesAid" value="כן" required />כן</label>
       <label><input type="radio" name="receivesAid" value="לא" required />לא</label>
     </div>
-    <label for="idUpload">חובה: יש לעלות תצלום ת.ז עם ספח</label>
-    <input type="file" id="idUpload" name="fileData" accept="image/*,application/pdf" required />
-    <div id="fileDisplay" class="file-display"></div>
+    <label for="driveFileLink">קישור לשיתוף הקובץ בגוגל דרייב (הדבק כאן):</label>
+    <input type="text" id="driveFileLink" name="driveFileLink" placeholder="https://drive.google.com/..." required />
     <button type="submit">שלח</button>
   </form>
   <div id="successMessage">הטופס נשלח בהצלחה! תודה רבה על שיתוף הפעולה.</div>
+  <div id="errorMessage"></div>
 
   <script>
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwzHzZcpJjjbKiE1SLb61dGOq9WYBojrxh552geHt7EACsH6VbFBO77FvCG8gkxgC-p0A/exec'; // החלף ב-URL החדש של ה-Web App
-
-    let selectedFile = null;
-
-    // הצגת שם הקובץ הנבחר
-    document.getElementById('idUpload').addEventListener('change', function () {
-      const fileDisplay = document.getElementById('fileDisplay');
-      if (this.files.length > 0) {
-        selectedFile = this.files[0];
-        fileDisplay.textContent = `נבחר קובץ: ${selectedFile.name}`;
-      } else {
-        selectedFile = null;
-        fileDisplay.textContent = '';
-      }
-    });
+    const SCRIPT_URL = 'https://script.google.com/macros/s/YOUR_NEW_WEB_APP_URL_HERE/exec';
 
     document.getElementById('familyForm').addEventListener('submit', async function (e) {
       e.preventDefault();
+
       const form = e.target;
       const submitBtn = form.querySelector('button[type="submit"]');
-      
-      // בדיקה שקובץ נבחר
-      if (!selectedFile) {
-        alert('אנא בחר קובץ תעודת זהות לפני השליחה');
+      const errorDiv = document.getElementById('errorMessage');
+      const successDiv = document.getElementById('successMessage');
+
+      errorDiv.style.display = 'none';
+      successDiv.style.display = 'none';
+
+      // ודא שהקישור מוזן
+      const driveFileLink = form.driveFileLink.value.trim();
+      if (!driveFileLink) {
+        errorDiv.textContent = 'אנא הזן קישור לתיקיית או קובץ שיתוף בגוגל דרייב';
+        errorDiv.style.display = 'block';
         return;
       }
-      
-      // הצגת אינדיקטור טעינה
-      submitBtn.textContent = 'מעלה קובץ ושולח...';
+
+      submitBtn.textContent = 'שולח...';
       submitBtn.disabled = true;
 
       try {
-        // המרת הקובץ ל-Base64
-        const base64File = await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result.split(',')[1]); // שמירת הנתונים של Base64 בלבד
-          reader.onerror = reject;
-          reader.readAsDataURL(selectedFile);
-        });
-
-        // יצירת נתונים כ-URL-encoded
-        const formData = new URLSearchParams();
-        for (const [key, value] of new FormData(form)) {
-          formData.append(key, value);
-        }
-        formData.append('fileName', selectedFile.name);
-        formData.append('fileType', selectedFile.type);
-        formData.append('fileSize', selectedFile.size);
-        formData.append('fileData', base64File);
-
-        console.log('Sending FormData:', Array.from(formData.entries()));
-
-        // שליחת הבקשה
+        const formData = new FormData(form);
         const response = await fetch(SCRIPT_URL, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded'
-          },
-          body: formData.toString()
+          body: formData
         });
 
         const responseText = await response.text();
-        console.log('Response:', responseText);
-        
         let result;
         try {
           result = JSON.parse(responseText);
-        } catch {
-          if (responseText.includes('success') || response.ok) {
-            result = { status: 'success' };
-          } else {
-            result = { status: 'error', message: responseText };
-          }
+        } catch (err) {
+          result = { status: 'error', message: 'תגובה לא תקינה מהשרת' };
         }
-        
-        if (result.status === 'success' || response.ok) {
-          document.getElementById('successMessage').style.display = 'block';
+
+        if (result.status === 'success') {
+          successDiv.style.display = 'block';
           form.reset();
-          document.getElementById('fileDisplay').textContent = '';
-          selectedFile = null;
-          document.getElementById('successMessage').scrollIntoView({ behavior: 'smooth' });
+          successDiv.scrollIntoView({ behavior: 'smooth' });
         } else {
-          alert('אירעה שגיאה: ' + (result.message || 'שגיאה לא ידועה'));
+          errorDiv.textContent = 'אירעה שגיאה: ' + (result.message || 'שגיאה לא ידועה');
+          errorDiv.style.display = 'block';
         }
       } catch (error) {
-        console.error('Client Error:', error);
-        alert('אירעה שגיאה בשליחת הטופס: ' + error.message);
+        errorDiv.textContent = 'אירעה שגיאה בשליחת הטופס: ' + error.message;
+        errorDiv.style.display = 'block';
       } finally {
         submitBtn.textContent = 'שלח';
         submitBtn.disabled = false;
