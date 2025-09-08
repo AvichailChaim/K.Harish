@@ -91,10 +91,6 @@
       background: #2d3699;
       color: #eef2ff;
     }
-    button[type='submit']:disabled {
-      background: #ccc;
-      cursor: not-allowed;
-    }
     #successMessage {
       display: none;
       background: #e7f6e7;
@@ -107,36 +103,11 @@
       font-weight: bold;
       font-size: 1.1em;
     }
-    #errorMessage {
-      display: none;
-      background: #ffe7e7;
-      color: #d63031;
-      padding: 18px;
-      border-radius: 10px;
-      border: 1.5px solid #d63031;
-      margin-top: 18px;
-      text-align: center;
-      font-weight: bold;
-      font-size: 1.1em;
-    }
     .file-display {
       margin-top: 10px;
       font-style: italic;
       color: #666;
       font-size: 0.9em;
-    }
-    .required-note {
-      color: #d63031;
-      font-weight: bold;
-    }
-    .upload-note {
-      background: #e8f0fe;
-      border: 1px solid #4285f4;
-      border-radius: 8px;
-      padding: 10px;
-      margin: 10px 0;
-      font-size: 0.9em;
-      color: #1a73e8;
     }
   </style>
 </head>
@@ -182,141 +153,76 @@
       <label><input type="radio" name="receivesAid" value="כן" required />כן</label>
       <label><input type="radio" name="receivesAid" value="לא" required />לא</label>
     </div>
-    
-    <label for="idUpload" class="required-note">חובה: יש להעלות תצלום ת.ז עם ספח</label>
-    <div class="upload-note">
-      הקובץ יישמר אוטומטית ויישלח אליך למייל לאחר שליחת הטופס
-    </div>
-    <input type="file" id="idUpload" name="idUpload" accept="image/*,application/pdf" required />
+    <label for="idUpload">חובה: יש לעלות תצלום ת.ז עם ספח</label>
+    <input type="file" id="idUpload" name="fileData" accept="image/*,application/pdf" required />
     <div id="fileDisplay" class="file-display"></div>
-    
     <button type="submit">שלח</button>
   </form>
   <div id="successMessage">הטופס נשלח בהצלחה! תודה רבה על שיתוף הפעולה.</div>
-  <div id="errorMessage"></div>
-  
+
   <script>
-    // *** שנה את ה-URL לכתובת החדשה של ה-Web App שלך ***
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwzHzZcpJjjbKiE1SLb61dGOq9WYBojrxh552geHt7EACsH6VbFBO77FvCG8gkxgC-p0A/exec';
-    const TARGET_EMAIL = 'kh048665580@gmail.com';
-    
+    const SCRIPT_URL = 'YOUR_ACTUAL_WEB_APP_URL'; // החלף ב-URL האמיתי של ה-Web App
+
     let selectedFile = null;
-    
+
     // הצגת שם הקובץ הנבחר
     document.getElementById('idUpload').addEventListener('change', function () {
       const fileDisplay = document.getElementById('fileDisplay');
       if (this.files.length > 0) {
         selectedFile = this.files[0];
-        fileDisplay.textContent = `נבחר קובץ: ${selectedFile.name} (${(selectedFile.size / 1024 / 1024).toFixed(2)} MB)`;
+        fileDisplay.textContent = `נבחר קובץ: ${selectedFile.name}`;
       } else {
         selectedFile = null;
         fileDisplay.textContent = '';
       }
     });
-    
+
     document.getElementById('familyForm').addEventListener('submit', async function (e) {
       e.preventDefault();
-      console.log('Form submission started');
-      
       const form = e.target;
       const submitBtn = form.querySelector('button[type="submit"]');
-      const errorDiv = document.getElementById('errorMessage');
-      const successDiv = document.getElementById('successMessage');
-      
-      // הסתרת הודעות קודמות
-      errorDiv.style.display = 'none';
-      successDiv.style.display = 'none';
       
       // בדיקה שקובץ נבחר
       if (!selectedFile) {
-        errorDiv.textContent = 'אנא בחר קובץ תעודת זהות לפני השליחה';
-        errorDiv.style.display = 'block';
-        return;
-      }
-      
-      // בדיקת גודל קובץ (מגבלה של 10MB)
-      if (selectedFile.size > 10 * 1024 * 1024) {
-        errorDiv.textContent = 'גודל הקובץ גדול מדי. אנא בחר קובץ בגודל של עד 10MB';
-        errorDiv.style.display = 'block';
+        alert('אנא בחר קובץ תעודת זהות לפני השליחה');
         return;
       }
       
       // הצגת אינדיקטור טעינה
       submitBtn.textContent = 'מעלה קובץ ושולח...';
       submitBtn.disabled = true;
-      
+
       try {
-        console.log('Processing file:', selectedFile.name);
-        
         // המרת הקובץ ל-Base64
         const base64File = await new Promise((resolve, reject) => {
           const reader = new FileReader();
-          reader.onload = () => {
-            const result = reader.result;
-            console.log('FileReader result type:', typeof result);
-            resolve(result.split(',')[1]); // שמירת הנתונים של Base64 בלבד
-          };
-          reader.onerror = (error) => {
-            console.error('FileReader error:', error);
-            reject(error);
-          };
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
           reader.readAsDataURL(selectedFile);
         });
-        
-        console.log('File converted to base64, length:', base64File.length);
-        
-        // יצירת אובייקט נתונים
-        const formData = {
-          // נתוני הטופס
-          aidType: form.querySelector('input[name="aidType"]:checked')?.value || '',
-          email: form.email.value,
-          firstName: form.firstName.value,
-          lastName: form.lastName.value,
-          phone: form.phone.value,
-          idNumber: form.idNumber.value,
-          childrenCount: form.childrenCount.value,
-          street: form.street.value,
-          buildingNumber: form.buildingNumber.value,
-          apartmentNumber: form.apartmentNumber.value,
-          ownershipStatus: form.querySelector('input[name="ownershipStatus"]:checked')?.value || '',
-          fatherIncome: form.fatherIncome.value,
-          motherIncome: form.motherIncome.value,
-          receivesAid: form.querySelector('input[name="receivesAid"]:checked')?.value || '',
-          
-          // נתוני הקובץ
-          fileName: selectedFile.name,
-          fileType: selectedFile.type,
-          fileSize: selectedFile.size,
-          fileData: base64File,
-          
-          // מייל יעד
-          targetEmail: TARGET_EMAIL,
-          
-          // חותמת זמן
-          timestamp: new Date().toISOString()
-        };
-        
-        console.log('Sending data to:', SCRIPT_URL);
-        
+
+        // יצירת FormData
+        const formData = new FormData(form);
+        formData.append('fileName', selectedFile.name);
+        formData.append('fileType', selectedFile.type);
+        formData.append('fileSize', selectedFile.size);
+        formData.append('fileData', base64File);
+
+        console.log('Sending FormData:', Array.from(formData.entries()));
+
         // שליחת הבקשה
         const response = await fetch(SCRIPT_URL, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(formData)
+          body: formData
         });
-        
-        console.log('Response status:', response.status);
-        
+
         const responseText = await response.text();
-        console.log('Response text:', responseText);
+        console.log('Response:', responseText);
         
         let result;
         try {
           result = JSON.parse(responseText);
-        } catch (parseError) {
-          console.log('Failed to parse JSON response:', parseError);
+        } catch {
           if (responseText.includes('success') || response.ok) {
             result = { status: 'success' };
           } else {
@@ -325,24 +231,17 @@
         }
         
         if (result.status === 'success' || response.ok) {
-          successDiv.innerHTML = `
-            הטופס נשלח בהצלחה!<br>
-            הקובץ נשלח למייל: ${TARGET_EMAIL}<br>
-            תודה רבה על שיתוף הפעולה.
-          `;
-          successDiv.style.display = 'block';
+          document.getElementById('successMessage').style.display = 'block';
           form.reset();
           document.getElementById('fileDisplay').textContent = '';
           selectedFile = null;
-          successDiv.scrollIntoView({ behavior: 'smooth' });
+          document.getElementById('successMessage').scrollIntoView({ behavior: 'smooth' });
         } else {
-          errorDiv.textContent = 'אירעה שגיאה: ' + (result.message || 'שגיאה לא ידועה');
-          errorDiv.style.display = 'block';
+          alert('אירעה שגיאה: ' + (result.message || 'שגיאה לא ידועה'));
         }
       } catch (error) {
         console.error('Client Error:', error);
-        errorDiv.textContent = 'אירעה שגיאה בשליחת הטופס. אנא נסה שוב או צור קשר לתמיכה.';
-        errorDiv.style.display = 'block';
+        alert('אירעה שגיאה בשליחת הטופס: ' + error.message);
       } finally {
         submitBtn.textContent = 'שלח';
         submitBtn.disabled = false;
@@ -351,4 +250,3 @@
   </script>
 </body>
 </html>
-
