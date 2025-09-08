@@ -130,7 +130,7 @@
     <label for="phone">מספר פלאפון:</label>
     <input type="tel" id="phone" name="phone" required />
     <label for="idNumber">מספר תעודת זהות:</label>
-    <input type="text" id="idNumber" name="idNumber" required pattern="^\d{9}$" inputmode="numeric" title="אנא הזן בדיוק 9 ספרות" />
+    <input type="text" id="idNumber" name="idNumber" required pattern="^\\d{9}$" inputmode="numeric" title="אנא הזן בדיוק 9 ספרות" />
     <label for="childrenCount">מספר ילדים (עד גיל 18):</label>
     <input type="number" id="childrenCount" name="childrenCount" min="0" required />
     <label for="street">רחוב:</label>
@@ -157,7 +157,7 @@
     <div class="note">
       חובה עליך לשלוח מייל לכתובת: <strong>kh048665580@gmail.com</strong><br>
       בכותרת המייל יש לציין: שם המבקש + לצרף למייל - צילום תעודת זהות וספח - 
-	 פרט חשוב שבלעדיו לא נקבל את הבקשה!
+      פרט חשוב שבלעדיו לא נקבל את הבקשה!
     </div>
     <div class="checkbox-group">
       <label>
@@ -165,25 +165,20 @@
         אני מאשר/ת ששלחתי את המייל עם תעודת הזהות והספח לכתובת הנ"ל
       </label>
     </div>
-
     <button type="submit">שלח</button>
   </form>
   <div id="successMessage">הטופס נשלח בהצלחה! תודה רבה על שיתוף הפעולה.</div>
-
   <script>
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwzHzZcpJjjbKiE1SLb61dGOq9WYBojrxh552geHt7EACsH6VbFBO77FvCG8gkxgC-p0A/exec';
-
     document.getElementById('familyForm').addEventListener('submit', async function (e) {
       e.preventDefault();
       const form = e.target;
       const submitBtn = form.querySelector('button[type="submit"]');
-
       // בדיקת וולידציה מובנית לדפדפן
       if (!form.checkValidity()) {
         form.reportValidity();
         return;
       }
-
       // בדיקה שהמשתמש סימן שישלח מייל
       const confirmEmail = form.querySelector('#confirmEmailSent');
       if (!confirmEmail.checked) {
@@ -191,13 +186,10 @@
         confirmEmail.focus();
         return;
       }
-
       submitBtn.textContent = 'שולח...';
       submitBtn.disabled = true;
-
       try {
         const formData = new URLSearchParams();
-
         formData.append('aidType', form.querySelector('input[name="aidType"]:checked')?.value || '');
         formData.append('email', form.querySelector('#email').value);
         formData.append('firstName', form.querySelector('#firstName').value);
@@ -212,8 +204,8 @@
         formData.append('fatherIncome', form.querySelector('#fatherIncome').value);
         formData.append('motherIncome', form.querySelector('#motherIncome').value);
         formData.append('receivesAid', form.querySelector('input[name="receivesAid"]:checked')?.value || '');
-        formData.append('confirmEmailSent', confirmEmail.checked ? 'כן' : 'לא');
-
+        // כאן מוסיפים לשלוח או לא לשלוח בהתאם לסימון
+        formData.append('sendDocument', confirmEmail.checked ? 'שלח מסמך' : 'לא שלח');
         const response = await fetch(SCRIPT_URL, {
           method: 'POST',
           headers: {
@@ -221,10 +213,8 @@
           },
           body: formData.toString()
         });
-
         const responseText = await response.text();
         console.log('Response:', responseText);
-
         let result;
         try {
           result = JSON.parse(responseText);
