@@ -125,29 +125,18 @@
       color: #666;
       font-size: 0.9em;
     }
+    .required-note {
+      color: #d63031;
+      font-weight: bold;
+    }
     .upload-note {
-      background: #e8f4fd;
-      border: 1px solid #1976d2;
+      background: #e8f0fe;
+      border: 1px solid #4285f4;
       border-radius: 8px;
-      padding: 12px;
+      padding: 10px;
       margin: 10px 0;
       font-size: 0.9em;
-      color: #1976d2;
-    }
-    .progress-bar {
-      display: none;
-      width: 100%;
-      height: 20px;
-      background-color: #f0f3ff;
-      border-radius: 10px;
-      margin: 10px 0;
-      overflow: hidden;
-    }
-    .progress-fill {
-      height: 100%;
-      background-color: #3b4cca;
-      border-radius: 10px;
-      transition: width 0.3s ease;
+      color: #1a73e8;
     }
   </style>
 </head>
@@ -193,22 +182,24 @@
       <label><input type="radio" name="receivesAid" value="כן" required />כן</label>
       <label><input type="radio" name="receivesAid" value="לא" required />לא</label>
     </div>
-    <label for="idUpload">חובה: יש להעלות תצלום ת.ז עם ספח</label>
+    
+    <label for="idUpload" class="required-note">חובה: יש להעלות תצלום ת.ז עם ספח</label>
     <div class="upload-note">
-      הקובץ יישמר אוטומטית ב-Google Drive ויישלח למייל kh048665580@gmail.com
+      הקובץ יישמר אוטומטית ויישלח אליך למייל לאחר שליחת הטופס
     </div>
-    <input type="file" id="idUpload" name="fileData" accept="image/*,application/pdf" required />
+    <input type="file" id="idUpload" name="idUpload" accept="image/*,application/pdf" required />
     <div id="fileDisplay" class="file-display"></div>
-    <div id="progressBar" class="progress-bar">
-      <div id="progressFill" class="progress-fill"></div>
-    </div>
+    
     <button type="submit">שלח</button>
   </form>
-  <div id="successMessage">הטופס נשלח בהצלחה! המסמך נשמר ונשלח למייל. תודה רבה על שיתוף הפעולה.</div>
+  <div id="successMessage">הטופס נשלח בהצלחה! תודה רבה על שיתוף הפעולה.</div>
   <div id="errorMessage"></div>
+  
   <script>
     // *** שנה את ה-URL לכתובת החדשה של ה-Web App שלך ***
     const SCRIPT_URL = 'https://script.google.com/macros/s/YOUR_NEW_WEB_APP_URL_HERE/exec';
+    const TARGET_EMAIL = 'kh048665580@gmail.com';
+    
     let selectedFile = null;
     
     // הצגת שם הקובץ הנבחר
@@ -222,14 +213,6 @@
         fileDisplay.textContent = '';
       }
     });
-    
-    // פונקציה להצגת התקדמות
-    function updateProgress(percent) {
-      const progressBar = document.getElementById('progressBar');
-      const progressFill = document.getElementById('progressFill');
-      progressBar.style.display = 'block';
-      progressFill.style.width = percent + '%';
-    }
     
     document.getElementById('familyForm').addEventListener('submit', async function (e) {
       e.preventDefault();
@@ -251,9 +234,9 @@
         return;
       }
       
-      // בדיקת גודל קובץ (מקסימום 10MB)
+      // בדיקת גודל קובץ (מגבלה של 10MB)
       if (selectedFile.size > 10 * 1024 * 1024) {
-        errorDiv.textContent = 'גודל הקובץ גדול מדי. אנא בחר קובץ קטן מ-10MB';
+        errorDiv.textContent = 'גודל הקובץ גדול מדי. אנא בחר קובץ בגודל של עד 10MB';
         errorDiv.style.display = 'block';
         return;
       }
@@ -261,48 +244,70 @@
       // הצגת אינדיקטור טעינה
       submitBtn.textContent = 'מעלה קובץ ושולח...';
       submitBtn.disabled = true;
-      updateProgress(10);
       
       try {
         console.log('Processing file:', selectedFile.name);
-        updateProgress(30);
         
         // המרת הקובץ ל-Base64
         const base64File = await new Promise((resolve, reject) => {
           const reader = new FileReader();
           reader.onload = () => {
             const result = reader.result;
-            console.log('FileReader result:', result.substring(0, 100) + '...');
+            console.log('FileReader result type:', typeof result);
             resolve(result.split(',')[1]); // שמירת הנתונים של Base64 בלבד
           };
-          reader.onerror = reject;
+          reader.onerror = (error) => {
+            console.error('FileReader error:', error);
+            reject(error);
+          };
           reader.readAsDataURL(selectedFile);
         });
         
         console.log('File converted to base64, length:', base64File.length);
-        updateProgress(60);
         
-        // יצירת נתונים כ-FormData
-        const formData = new FormData(form);
+        // יצירת אובייקט נתונים
+        const formData = {
+          // נתוני הטופס
+          aidType: form.querySelector('input[name="aidType"]:checked')?.value || '',
+          email: form.email.value,
+          firstName: form.firstName.value,
+          lastName: form.lastName.value,
+          phone: form.phone.value,
+          idNumber: form.idNumber.value,
+          childrenCount: form.childrenCount.value,
+          street: form.street.value,
+          buildingNumber: form.buildingNumber.value,
+          apartmentNumber: form.apartmentNumber.value,
+          ownershipStatus: form.querySelector('input[name="ownershipStatus"]:checked')?.value || '',
+          fatherIncome: form.fatherIncome.value,
+          motherIncome: form.motherIncome.value,
+          receivesAid: form.querySelector('input[name="receivesAid"]:checked')?.value || '',
+          
+          // נתוני הקובץ
+          fileName: selectedFile.name,
+          fileType: selectedFile.type,
+          fileSize: selectedFile.size,
+          fileData: base64File,
+          
+          // מייל יעד
+          targetEmail: TARGET_EMAIL,
+          
+          // חותמת זמן
+          timestamp: new Date().toISOString()
+        };
         
-        // הוספת נתוני הקובץ
-        formData.append('fileName', selectedFile.name);
-        formData.append('fileType', selectedFile.type);
-        formData.append('fileSize', selectedFile.size.toString());
-        formData.append('fileData', base64File);
-        formData.append('recipientEmail', 'kh048665580@gmail.com'); // המייל שאליו לשלוח
-        
-        console.log('FormData prepared, sending to:', SCRIPT_URL);
-        updateProgress(80);
+        console.log('Sending data to:', SCRIPT_URL);
         
         // שליחת הבקשה
         const response = await fetch(SCRIPT_URL, {
           method: 'POST',
-          body: formData
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(formData)
         });
         
         console.log('Response status:', response.status);
-        updateProgress(90);
         
         const responseText = await response.text();
         console.log('Response text:', responseText);
@@ -319,34 +324,28 @@
           }
         }
         
-        updateProgress(100);
-        
         if (result.status === 'success' || response.ok) {
+          successDiv.innerHTML = `
+            הטופס נשלח בהצלחה!<br>
+            הקובץ נשלח למייל: ${TARGET_EMAIL}<br>
+            תודה רבה על שיתוף הפעולה.
+          `;
           successDiv.style.display = 'block';
           form.reset();
           document.getElementById('fileDisplay').textContent = '';
           selectedFile = null;
           successDiv.scrollIntoView({ behavior: 'smooth' });
-          
-          // הסתרת סרגל התקדמות אחרי 2 שניות
-          setTimeout(() => {
-            document.getElementById('progressBar').style.display = 'none';
-          }, 2000);
         } else {
           errorDiv.textContent = 'אירעה שגיאה: ' + (result.message || 'שגיאה לא ידועה');
           errorDiv.style.display = 'block';
         }
       } catch (error) {
         console.error('Client Error:', error);
-        errorDiv.textContent = 'אירעה שגיאה בשליחת הטופס: ' + error.message;
+        errorDiv.textContent = 'אירעה שגיאה בשליחת הטופס. אנא נסה שוב או צור קשר לתמיכה.';
         errorDiv.style.display = 'block';
       } finally {
         submitBtn.textContent = 'שלח';
         submitBtn.disabled = false;
-        // הסתרת סרגל התקדמות במקרה של שגיאה
-        setTimeout(() => {
-          document.getElementById('progressBar').style.display = 'none';
-        }, 1000);
       }
     });
   </script>
