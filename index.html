@@ -117,12 +117,17 @@
       font-weight: bold;
       font-size: 1.1em;
     }
-    .file-link-container {
+    .file-display {
       margin-top: 10px;
       font-style: italic;
+      color: #666;
       font-size: 0.9em;
+    }
+    a.file-link {
       color: #3b4cca;
       word-break: break-all;
+      display: block;
+      margin-top: 10px;
     }
   </style>
 </head>
@@ -168,127 +173,99 @@
       <label><input type="radio" name="receivesAid" value="כן" required />כן</label>
       <label><input type="radio" name="receivesAid" value="לא" required />לא</label>
     </div>
-
-    <label>חובה: יש להעלות תצלום ת.ז עם ספח דרך הכפתור למטה</label>
-    <button type="button" id="uploadBtn" style="width:100%; padding:12px; border-radius:10px; background:#3b4cca; color:white; font-weight:bold; margin-top:10px; cursor:pointer;">העלה את תצלום ת.ז עם ספח לגוגל דרייב</button>
-
-    <div id="fileLinkContainer" class="file-link-container"></div>
-
-    <button type="submit" style="margin-top:20px;">שלח</button>
+    <label>חובה: יש להעלות תצלום ת.ז עם ספח</label>
+    <input type="file" id="idUpload" name="file" accept="image/*,application/pdf" required />
+    <div id="fileLinkContainer" class="file-display"></div>
+    <button type="submit">שלח</button>
   </form>
-
   <div id="successMessage">הטופס נשלח בהצלחה! תודה רבה על שיתוף הפעולה.</div>
   <div id="errorMessage"></div>
 
-<script>
-  // קישור לסקריפט ה-Google Apps Script (שיש להגדיר לשרת)
-  const SCRIPT_URL = 'https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec';
-
-  let uploadedFileUrl = '';
-
-  document.getElementById('uploadBtn').addEventListener('click', () => {
-    // פותח את תיבת דיאלוג בחירת קובץ של גוגל דרייב
-    google.script.run.withSuccessHandler(fileUrl => {
-      if (fileUrl) {
-        uploadedFileUrl = fileUrl;
-        const container = document.getElementById('fileLinkContainer');
-        container.innerHTML = `<a href="${uploadedFileUrl}" target="_blank" rel="noopener">קישור לתצלום ת.ז שהועלה</a>`;
-      }
-    }).openDrivePicker();
-  });
-
-  document.getElementById('familyForm').addEventListener('submit', async function (e) {
-    e.preventDefault();
-    const errorDiv = document.getElementById('errorMessage');
+  <script>
+    const form = document.getElementById('familyForm');
+    const fileInput = document.getElementById('idUpload');
+    const fileLinkContainer = document.getElementById('fileLinkContainer');
     const successDiv = document.getElementById('successMessage');
-    errorDiv.style.display = 'none';
-    successDiv.style.display = 'none';
+    const errorDiv = document.getElementById('errorMessage');
+    
+    let uploadedFileUrl = '';
 
-    if (!uploadedFileUrl) {
-      errorDiv.textContent = 'חובה להעלות תצלום ת.ז עם ספח לפני שליחת הטופס';
-      errorDiv.style.display = 'block';
-      return;
-    }
-
-    const formData = new FormData(this);
-    formData.append('driveFileUrl', uploadedFileUrl);
-
-    const plainObj = {};
-    formData.forEach((value, key) => plainObj[key] = value);
-
-    try {
-      const response = await fetch(SCRIPT_URL, {
-        method: 'POST',
-        body: JSON.stringify(plainObj),
-        headers: {'Content-Type': 'application/json'}
-      });
-      const result = await response.json();
-
-      if (result.status === 'success') {
-        successDiv.style.display = 'block';
-        this.reset();
-        uploadedFileUrl = '';
-        document.getElementById('fileLinkContainer').innerHTML = '';
-        successDiv.scrollIntoView({ behavior: 'smooth' });
-      } else {
-        errorDiv.textContent = result.message || 'שגיאה לא ידועה';
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      errorDiv.style.display = 'none';
+      successDiv.style.display = 'none';
+      
+      if (!uploadedFileUrl) {
+        errorDiv.textContent = 'חובה להעלות את תצלום ת.ז עם ספח לפני השליחה';
         errorDiv.style.display = 'block';
+        return;
       }
-    } catch (err) {
-      errorDiv.textContent = 'שגיאה בשליחת הטופס: ' + err.message;
-      errorDiv.style.display = 'block';
-    }
-  });
-</script>
+      
+      // אסוף את כל שדות הטופס
+      const formData = new FormData(form);
+      formData.append('driveFileUrl', uploadedFileUrl);
 
-<script src="https://apis.google.com/js/api.js"></script>
-<script>
-  // JavaScript לטיפול ב-Picker של Google Drive, פתיחתו, והעלאה עם שיתוף אוטומטי למייל
+      // שלח את הנתונים לשרת Apps Script
+      fetch('https://script.google.com/macros/s/YOUR_WEB_APP_ID/exec', {
+        method: 'POST',
+        body: formData
+      }).then(async res => {
+        const text = await res.text();
+        let result;
+        try {
+          result = JSON.parse(text);
+        } catch {
+          result = { status: 'error', message: 'תגובה לא תקינה מהשרת' };
+        }
+        if (result.status === 'success') {
+          successDiv.style.display = 'block';
+          form.reset();
+          fileLinkContainer.textContent = '';
+          uploadedFileUrl = '';
+          successDiv.scrollIntoView({ behavior: 'smooth' });
+        } else {
+          errorDiv.textContent = 'שגיאה בשליחה: ' + (result.message || 'שגיאה לא ידועה');
+          errorDiv.style.display = 'block';
+        }
+      }).catch(err => {
+        errorDiv.textContent = 'שגיאה בשליחה: ' + err.message;
+        errorDiv.style.display = 'block';
+      });
+    });
 
-  let pickerApiLoaded = false;
-  let oauthToken = '';
+    fileInput.addEventListener('change', () => {
+      const file = fileInput.files[0];
+      if (!file) {
+        fileLinkContainer.textContent = '';
+        uploadedFileUrl = '';
+        return;
+      }
+      errorDiv.style.display = 'none';
+      successDiv.style.display = 'none';
+      fileLinkContainer.textContent = 'מעלה קובץ ל-Google Drive, אנא המתן...';
 
-  function loadPicker() {
-    gapi.load('auth', {'callback': onAuthApiLoad});
-    gapi.load('picker', {'callback': onPickerApiLoad});
-  }
-
-  function onAuthApiLoad() {
-    // כאן צריך להפעיל אישור OAuth לקבלת Token
-    // מסתמך על הפעלת OAuth בסקריפט Google Apps Script עצמו או אפליקציית Web App בשתי הפעולות
-  }
-
-  function onPickerApiLoad() {
-    pickerApiLoaded = true;
-  }
-
-  function openPicker() {
-    if (!pickerApiLoaded || !oauthToken) {
-      alert('מחכה לטעינת Picker או לאישור משתמש...');
-      return;
-    }
-
-    const picker = new google.picker.PickerBuilder()
-      .addView(google.picker.ViewId.DOCS)
-      .setOAuthToken(oauthToken)
-      .setDeveloperKey('YOUR_DEVELOPER_KEY')
-      .setCallback(pickerCallback)
-      .build();
-
-    picker.setVisible(true);
-  }
-
-  function pickerCallback(data) {
-    if (data.action === google.picker.Action.PICKED) {
-      let file = data.docs[0];
-      // כאן אפשרתת לשלוח לשרת או להציג קישור
-      const fileUrl = file.url;
-      document.getElementById('fileLinkContainer').innerHTML = `<a href="${fileUrl}" target="_blank">${file.name}</a>`;
-      uploadedFileUrl = fileUrl;
-    }
-  }
-
-  // צריך לטפל באישור OAuth בשרת Google Apps Script
-</script>
+      // הפעולה תשלח לאפליקציית Apps Script כדי להעלות את הקובץ ל-Drive
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        const base64 = event.target.result.split(',')[1];
+        google.script.run.withSuccessHandler(function(fileUrl) {
+          uploadedFileUrl = fileUrl;
+          fileLinkContainer.innerHTML = `קובץ הועלה בהצלחה: <a href="${fileUrl}" target="_blank" class="file-link">${file.name}</a>`;
+        }).withFailureHandler(function(msg) {
+          errorDiv.textContent = 'אירעה שגיאה בהעלאת הקובץ: ' + msg;
+          errorDiv.style.display = 'block';
+          fileLinkContainer.textContent = '';
+          uploadedFileUrl = '';
+        }).uploadFileToDrive(base64, file.name, file.type);
+      };
+      reader.onerror = function(err) {
+        errorDiv.textContent = 'אירעה שגיאה בקבלת הקובץ: ' + err.message;
+        errorDiv.style.display = 'block';
+        fileLinkContainer.textContent = '';
+        uploadedFileUrl = '';
+      };
+      reader.readAsDataURL(file);
+    });
+  </script>
 </body>
 </html>
