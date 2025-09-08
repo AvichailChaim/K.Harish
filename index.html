@@ -117,16 +117,11 @@
       font-weight: bold;
       font-size: 1.1em;
     }
-    .file-link {
-      margin-top: 10px;
-      font-style: italic;
-      color: #666;
+    .instructions {
       font-size: 0.9em;
-      word-wrap: break-word;
-    }
-    a.drive-link {
-      color: #3b4cca;
-      text-decoration: underline;
+      color: #666;
+      margin-bottom: 12px;
+      line-height: 1.4;
     }
   </style>
 </head>
@@ -173,44 +168,38 @@
       <label><input type="radio" name="receivesAid" value="לא" required />לא</label>
     </div>
 
-    <label for="driveLinkInput">
-      חובה: יש להעלות את תצלום ת.ז עם ספח לגוגל דרייב האישי שלך, 
-      ולשתף את הקובץ עם המייל: 
-      <a href="mailto:kh048665580@gmail.com" target="_blank">kh048665580@gmail.com</a> 
-      (עם הרשאת עריכה).
-    </label>
-    <input type="url" id="driveLinkInput" name="driveFileLink" placeholder="הדבק כאן את קישור השיתוף מגוגל דרייב של תפקיד הזיהוי" required />
-    <div id="driveLinkDisplay" class="file-link"></div>
-
+    <label for="driveFileLink">חובה: יש להעלות תצלום ת.ז עם ספח לגוגל דרייב ולשתף איתנו.</label>
+    <div class="instructions">
+      <p>1. העלה את תצלום תעודת הזהות עם הספח לגוגל דרייב האישי שלך.</p>
+      <p>2. לחץ על הקובץ ב-Drive, לחץ על 'שתף', ותן הרשאת עריכה למייל: <strong>kh048665580@gmail.com</strong></p>
+      <p>3. העתק את קישור השיתוף והדבק אותו כאן מתחת:</p>
+    </div>
+    <input type="url" id="driveFileLink" name="driveFileLink" required placeholder="הדבק כאן את קישור השיתוף מדיסק Google Drive" />
+    
     <button type="submit">שלח</button>
   </form>
   <div id="successMessage">הטופס נשלח בהצלחה! תודה רבה על שיתוף הפעולה.</div>
   <div id="errorMessage"></div>
+
   <script>
-    const form = document.getElementById('familyForm');
-    const driveLinkInput = document.getElementById('driveLinkInput');
-    const driveLinkDisplay = document.getElementById('driveLinkDisplay');
-    const successDiv = document.getElementById('successMessage');
-    const errorDiv = document.getElementById('errorMessage');
-    const submitBtn = form.querySelector('button[type="submit"]');
+    // *** שנה את ה-URL לכתובת החדשה של ה-Web App שלך ***
+    const SCRIPT_URL = 'https://script.google.com/macros/s/YOUR_NEW_WEB_APP_URL_HERE/exec';
 
-    // הצגת קישור לגוגל דרייב מתוקן
-    driveLinkInput.addEventListener('input', () => {
-      const val = driveLinkInput.value.trim();
-      if (val) {
-        driveLinkDisplay.innerHTML = `קישור להעלאת המסמך: <a href="${val}" target="_blank" class="drive-link">${val}</a>`;
-      } else {
-        driveLinkDisplay.textContent = '';
-      }
-    });
-
-    form.addEventListener('submit', async (e) => {
+    document.getElementById('familyForm').addEventListener('submit', async function (e) {
       e.preventDefault();
+
+      const form = e.target;
+      const submitBtn = form.querySelector('button[type="submit"]');
+      const errorDiv = document.getElementById('errorMessage');
+      const successDiv = document.getElementById('successMessage');
+
       errorDiv.style.display = 'none';
       successDiv.style.display = 'none';
 
-      if (!driveLinkInput.value.trim()) {
-        errorDiv.textContent = 'נא הדבק את קישור השיתוף מגוגל דרייב.';
+      // בדיקת תקינות קישור
+      const linkInput = document.getElementById('driveFileLink');
+      if (!linkInput.value.trim()) {
+        errorDiv.textContent = 'אנא הדבק את קישור שיתוף הגוגל דרייב של תעודת הזהות';
         errorDiv.style.display = 'block';
         return;
       }
@@ -220,30 +209,28 @@
 
       try {
         const formData = new FormData(form);
-        const response = await fetch('https://script.google.com/macros/s/YOUR_NEW_WEB_APP_URL_HERE/exec', {
+        const response = await fetch(SCRIPT_URL, {
           method: 'POST',
           body: formData
         });
-
-        const text = await response.text();
+        const responseText = await response.text();
         let result;
         try {
-          result = JSON.parse(text);
-        } catch {
-          result = { status: 'error', message: 'תקלה בשרת' };
+          result = JSON.parse(responseText);
+        } catch (err) {
+          result = {status: 'error', message: 'תגובה לא תקינה מהשרת'};
         }
 
         if (result.status === 'success') {
           successDiv.style.display = 'block';
           form.reset();
-          driveLinkDisplay.textContent = '';
-          window.scrollTo({ top: 0, behavior: 'smooth' });
+          successDiv.scrollIntoView({ behavior: 'smooth' });
         } else {
           errorDiv.textContent = 'אירעה שגיאה: ' + (result.message || 'שגיאה לא ידועה');
           errorDiv.style.display = 'block';
         }
-      } catch (err) {
-        errorDiv.textContent = 'אירעה שגיאה בשליחת הטופס: ' + err.message;
+      } catch (error) {
+        errorDiv.textContent = 'אירעה שגיאה בשליחת הטופס: ' + error.message;
         errorDiv.style.display = 'block';
       } finally {
         submitBtn.textContent = 'שלח';
