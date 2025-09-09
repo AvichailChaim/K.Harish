@@ -101,13 +101,8 @@
       font-size: 1.1em;
     }
     .note {
-      font-size: 0.95em;
-      background: #fff3cd;
-      padding: 12px;
-      border: 1px solid #ffecb5;
-      border-radius: 6px;
-      margin-top: 10px;
-      color: #856404;
+      /* לא בשימוש */
+      display: none;
     }
   </style>
 </head>
@@ -153,17 +148,6 @@
       <label><input type="radio" name="receivesAid" value="כן" required />כן</label>
       <label><input type="radio" name="receivesAid" value="לא" required />לא</label>
     </div>
-    
-    <div class="note">
-      חובה עליך לשלוח מייל לכתובת: <strong>kh048665580@gmail.com</strong><br>
-      בכותרת המייל יש לציין: שם המבקש + לצרף למייל - צילום תעודת זהות וספח - 
-      פרט חשוב שבלעדיו לא נקבל את הבקשה!
-    </div>
-    <label>האם שלחת את המסמכים במייל?</label>
-    <div class="radio-group">
-      <label><input type="radio" name="confirmEmailSent" value="כן" required />כן</label>
-      <label><input type="radio" name="confirmEmailSent" value="לא" required />לא</label>
-    </div>
     <button type="submit">שלח</button>
   </form>
   <div id="successMessage">הטופס נשלח בהצלחה! תודה רבה על שיתוף הפעולה.</div>
@@ -195,9 +179,7 @@
         formData.append('fatherIncome', form.querySelector('#fatherIncome').value);
         formData.append('motherIncome', form.querySelector('#motherIncome').value);
         formData.append('receivesAid', form.querySelector('input[name="receivesAid"]:checked')?.value || '');
-        const confirmEmailSentValue = form.querySelector('input[name="confirmEmailSent"]:checked')?.value;
-        formData.append('confirmEmailSent', confirmEmailSentValue || '');
-        console.log('Form Data sent: ', formData.toString()); // Add logging to browser console
+        console.log('Form Data sent: ', formData.toString());
         const response = await fetch(SCRIPT_URL, {
           method: 'POST',
           headers: {
